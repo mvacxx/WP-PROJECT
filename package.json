@@ -1,0 +1,28 @@
+{
+  "name": "wp-automation-saas",
+  "version": "0.2.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev:api & npm run dev:web",
+    "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build -ws",
+    "lint": "npm run lint -ws",
+    "test": "npm run test -ws",
+    "infra:up": "docker compose up -d postgres redis",
+    "infra:down": "docker compose down",
+    "stack:up": "docker compose --profile app up -d",
+    "stack:down": "docker compose --profile app down",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "devDependencies": {
+    "prisma": "^6.5.0",
+    "typescript": "^5.8.2"
+  }
+}
