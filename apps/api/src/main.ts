@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
@@ -21,6 +22,9 @@ async function bootstrap(): Promise<void> {
       forbidNonWhitelisted: true
     })
   );
+
+  app.useGlobalFilters(new HttpExceptionFilter());
+  app.enableShutdownHooks();
 
   const port = config.get<number>('API_PORT', 3001);
   await app.listen(port);

@@ -2,54 +2,41 @@
 
 Plataforma interna para provisionar blogs WordPress e operar fluxo de conteúdo semiautomático com geração externa (ex.: SEOwriting), mantendo o WordPress como hub central.
 
-## Fase 1 — Descoberta e Arquitetura
+## Status atual
+- ✅ Fase 1 concluída: arquitetura e plano.
+- ✅ Fase 2 concluída: bootstrap monorepo + infra local.
+- ✅ Fase 3 concluída (backend): entidades, APIs CRUD principais, filas BullMQ e logs.
 
-### 1) Arquitetura proposta (MVP + evolução)
+## Arquitetura resumida
+- **Web Admin**: Next.js + TypeScript + Tailwind.
+- **API**: NestJS + Prisma + BullMQ.
+- **Persistência**: PostgreSQL.
+- **Fila**: Redis.
+- **Integração futura**: adapters para WordPress e provedores de conteúdo.
 
-#### Camadas
-- **Frontend Admin (Next.js)**: dashboard interno para gestão de projetos, instalações WordPress, jobs de conteúdo e logs.
-- **API Backend (NestJS)**: domínio central com regras de negócio, autenticação admin, integração WordPress, provisionamento e filas.
-- **Banco (PostgreSQL + Prisma)**: estado transacional (projetos, instalações, jobs, logs, credenciais criptografadas).
-- **Filas (Redis + BullMQ)**: orquestração assíncrona de provisionamento, sincronização e publicação.
-- **Integradores (adapters/ports)**:
-  - `ProvisioningProvider` (prioridade SSH + WP-CLI; futuro Softaculous API).
-  - `WordpressClient` (REST API com múltiplas estratégias de autenticação).
-  - `ContentProvider` (interface para fornecedor externo de conteúdo sem acoplamento rígido).
-
-#### Princípios-chave
-- WordPress é o sistema de registro de conteúdo.
-- Fluxos críticos com idempotência, retry e logs por etapa.
-- Credenciais sensíveis criptografadas em repouso.
-- MVP com admin interno único, preparado para multiusuário depois.
-
-### 2) Estrutura de pastas
+## Estrutura
 
 ```text
 .
 ├── apps/
-│   ├── api/                 # NestJS API
-│   │   ├── src/
-│   │   │   ├── config/
-│   │   │   ├── health/
-│   │   │   └── prisma/
+│   ├── api/
+│   │   ├── src/common
+│   │   ├── src/modules
+│   │   │   ├── projects
+│   │   │   ├── wordpress-installations
+│   │   │   ├── content-jobs
+│   │   │   ├── logs
+│   │   │   └── queue
 │   │   └── Dockerfile
-│   └── web/                 # Next.js admin
-│       ├── src/
-│       │   ├── app/
-│       │   └── components/
-│       └── Dockerfile
-├── packages/
-│   └── shared/
-├── prisma/
-│   └── schema.prisma
-├── docker-compose.yml
-├── .env.example
-└── README.md
+│   └── web/
+├── packages/shared
+├── prisma/schema.prisma
+└── docker-compose.yml
 ```
 
-### 3) Schema inicial do banco
+## Banco de dados (Prisma)
 
-Entidades principais:
+Entidades principais no schema:
 - `AdminUser`
 - `Project`
 - `WordpressInstallation`
@@ -61,105 +48,94 @@ Status principais:
 - `ProjectStatus`: `draft`, `provisioning`, `ready`, `failed`, `paused`
 - `ContentJobStatus`: `pending`, `sending_to_generation`, `generated`, `posted_to_wordpress`, `review_pending`, `published`, `failed`
 
-### 4) Fluxos principais
+## APIs da Fase 3
 
-#### A. Provisionamento de projeto
-1. Admin cria projeto.
-2. API persiste projeto e enfileira job `provision-project`.
-3. Worker executa `ProvisioningProvider` via strategy.
-4. Atualiza estado no banco e logs por etapa.
+> Todas as rotas (exceto quando `ADMIN_API_KEY` não estiver definida) exigem header: `x-admin-api-key: <valor>`.
 
-#### B. Conteúdo (geração + WordPress)
-1. Admin cria `ContentJob`.
-2. Worker envia para `ContentProvider`.
-3. Resultado normalizado é enviado ao WordPress.
-4. Post vira `review_pending` para revisão manual ou publicação automática.
+### Health
+- `GET /api/v1/health`
 
-#### C. Integração WordPress
-- Teste de conexão
-- CRUD de posts
-- Ajustes de status/slug/categorias/tags/metadados
+### Projects
+- `POST /api/v1/projects`
+- `GET /api/v1/projects?page=1&pageSize=20`
+- `GET /api/v1/projects/:id`
+- `PATCH /api/v1/projects/:id`
+- `DELETE /api/v1/projects/:id`
 
-### 5) Decisões, riscos e trade-offs
+### WordPress Installations
+- `POST /api/v1/wordpress-installations`
+- `GET /api/v1/wordpress-installations/project/:projectId`
+- `PATCH /api/v1/wordpress-installations/:id`
+- `PATCH /api/v1/wordpress-installations/:id/status/:status`
+- `POST /api/v1/wordpress-installations/test-connection`
+- `PATCH /api/v1/wordpress-installations/project/:projectId/connection/:status`
 
-Decisões:
-- Monorepo com npm workspaces.
-- Prisma como ORM e migrações.
-- BullMQ + Redis para filas.
-- Ports/adapters para provisionamento e provider de conteúdo.
+### Content Jobs
+- `POST /api/v1/content-jobs`
+- `GET /api/v1/content-jobs?projectId=<id>&page=1&pageSize=20`
+- `PATCH /api/v1/content-jobs/:id/status`
 
-Riscos:
-- Dependência de ambiente real de hospedagem.
-- Credenciais sensíveis.
-- Instabilidade de APIs externas.
+### Logs
+- `POST /api/v1/logs/system`
+- `GET /api/v1/logs/system?projectId=<id>&page=1&pageSize=20`
+- `GET /api/v1/logs/content/:jobId`
 
-Mitigações:
-- Estratégias com fallback e mocks.
-- Criptografia + rotação de segredo.
-- Retry com backoff + logs estruturados.
+## Filas (BullMQ)
 
----
+- Queue: `content-generation-queue`
+- Job: `generate-content`
+- Ao criar `ContentJob`, o backend:
+  1. persiste no banco com status `pending`
+  2. cria log de conteúdo
+  3. enfileira job com retry/backoff
+- Worker inicial da Fase 3 muda status para `sending_to_generation` e grava log; em falha, marca `failed` + motivo.
 
-## Fase 2 — Bootstrap (implementado)
+## Segurança básica (MVP)
+- `helmet` habilitado.
+- `ValidationPipe` global (`whitelist`, `forbidNonWhitelisted`, `transform`).
+- `HttpExceptionFilter` global para resposta padronizada de erro.
+- `ADMIN_API_KEY` opcional para proteção de rotas administrativas.
+- Nunca versionar `.env`.
 
-### Entregáveis implementados
-- Monorepo com `apps/api`, `apps/web`, `packages/shared`.
-- NestJS base (ConfigModule + validação de env + PrismaModule + Health endpoint).
-- Next.js base (TypeScript + Tailwind + dashboard inicial).
-- Prisma schema inicial pronto para migrações.
-- Docker Compose com `postgres`, `redis`, e profile opcional `app` (api + web).
-- Dockerfiles de `api` e `web` para ambiente de container.
-- `.env.example` no root e por app.
+## Como executar (dev)
 
-### Pré-requisitos
-- Node.js 22+
-- Docker + Docker Compose
-
-### Execução local (modo recomendado para desenvolvimento)
-
-1. Criar variáveis:
+1. Variáveis:
 ```bash
 cp .env.example .env
 ```
 
-2. Subir infra:
+2. Infra:
 ```bash
 npm run infra:up
 ```
 
-3. Instalar dependências:
+3. Dependências:
 ```bash
 npm install
 ```
 
-4. Gerar cliente prisma:
+4. Prisma:
 ```bash
 npm run prisma:generate
+# opcional quando houver migrations
+npm run prisma:migrate
 ```
 
-5. Rodar API e Web:
+5. Apps:
 ```bash
 npm run dev:api
 npm run dev:web
 ```
 
-### Execução local (stack containerizada)
+## Como executar (stack docker)
 
 ```bash
 cp .env.example .env
 npm run stack:up
 ```
 
-### Endpoints iniciais
-- API health: `GET http://localhost:3001/api/v1/health`
-- Frontend: `http://localhost:3000`
-
-### Segurança (MVP)
-- Nunca versionar `.env`.
-- `JWT_SECRET` forte e rotacionável.
-- `CREDENTIALS_ENCRYPTION_KEY` com 32+ caracteres.
-
-### Próximo passo (Fase 3)
-- Migrations reais (`prisma migrate dev`).
-- Módulos de domínio (projects, wordpress-installations, content-jobs, logs).
-- CRUDs e filas BullMQ com workers.
+## Próximos passos (Fase 4+)
+- Fase 4: interface admin completa consumindo as rotas já prontas.
+- Fase 5: camada de integração WordPress desacoplada (REST + auth strategies).
+- Fase 6: provisionamento via strategy (SSH/WP-CLI primeiro).
+- Fase 7: interface `ContentProvider` e adapter do fornecedor externo.
