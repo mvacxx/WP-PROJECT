@@ -9,6 +9,7 @@ import { LogsModule } from './modules/logs/logs.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { QueueModule } from './modules/queue/queue.module';
 import { WordpressInstallationsModule } from './modules/wordpress-installations/wordpress-installations.module';
+import { WordpressIntegrationModule } from './modules/wordpress-integration/wordpress-integration.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -23,6 +24,7 @@ import { PrismaModule } from './prisma/prisma.module';
     QueueModule,
     ProjectsModule,
     WordpressInstallationsModule,
+    WordpressIntegrationModule,
     ContentJobsModule
   ],
   providers: [

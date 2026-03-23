@@ -7,12 +7,85 @@ Plataforma interna para provisionar blogs WordPress e operar fluxo de conteúdo 
 - ✅ Fase 2 concluída: bootstrap monorepo + infra local.
 - ✅ Fase 3 concluída: backend com CRUD, logs e filas.
 - ✅ Fase 4 iniciada: frontend admin funcional conectado à API.
+- ✅ Fase 5 iniciada: adapter WordPress desacoplado com strategies de autenticação.
 
-## Arquitetura resumida
-- **Web Admin**: Next.js + TypeScript + Tailwind.
-- **API**: NestJS + Prisma + BullMQ.
-- **Persistência**: PostgreSQL.
-- **Fila**: Redis.
+## WordPress Integration Adapter (Fase 5)
+
+A camada foi implementada em `apps/api/src/modules/wordpress-integration` e segue padrão de portas/adapters:
+
+- `WordpressHttpClient`: cliente HTTP para `/wp-json/wp/v2`.
+- `WordpressAuthFactory`: escolhe estratégia de autenticação.
+- Strategies incluídas:
+  - `application_password` (Basic Auth)
+  - `bearer_token` (Bearer token)
+- `WordpressIntegrationService`: orquestra operações e grava logs.
+- `WordpressIntegrationController`: expõe APIs da integração.
+
+### Endpoints
+- `POST /api/v1/wordpress-integration/test-connection`
+- `POST /api/v1/wordpress-integration/posts/list`
+- `PATCH /api/v1/wordpress-integration/posts/:postId`
+- `POST /api/v1/wordpress-integration/pages/upsert`
+
+### Exemplos de payload
+
+#### Testar conexão
+```json
+{
+  "siteUrl": "https://meusite.com",
+  "auth": {
+    "method": "application_password",
+    "username": "admin",
+    "applicationPassword": "xxxx xxxx xxxx xxxx"
+  }
+}
+```
+
+#### Listar posts
+```json
+{
+  "siteUrl": "https://meusite.com",
+  "auth": {
+    "method": "bearer_token",
+    "bearerToken": "jwt-ou-token"
+  },
+  "page": 1,
+  "perPage": 10,
+  "status": "draft"
+}
+```
+
+#### Atualizar post
+```json
+{
+  "siteUrl": "https://meusite.com",
+  "auth": {
+    "method": "application_password",
+    "username": "admin",
+    "applicationPassword": "xxxx xxxx xxxx xxxx"
+  },
+  "status": "publish",
+  "slug": "novo-slug",
+  "categories": [3],
+  "tags": [10, 11]
+}
+```
+
+#### Criar/atualizar página
+```json
+{
+  "siteUrl": "https://meusite.com",
+  "auth": {
+    "method": "application_password",
+    "username": "admin",
+    "applicationPassword": "xxxx xxxx xxxx xxxx"
+  },
+  "title": "Privacy Policy",
+  "slug": "privacy-policy",
+  "content": "<p>Conteúdo...</p>",
+  "status": "draft"
+}
+```
 
 ## Frontend Admin (Fase 4)
 
@@ -20,32 +93,7 @@ Rotas implementadas:
 - `/` Dashboard com resumo e projetos recentes.
 - `/projects` Lista de projetos com status.
 - `/projects/new` Formulário de cadastro de projeto.
-- `/projects/[id]` Detalhes do projeto com:
-  - visão geral
-  - instalações WordPress
-  - jobs de conteúdo
-  - logs do projeto
-  - ações: acionar provisionamento, registrar instalação, criar job.
-
-Configurações de frontend:
-- `NEXT_PUBLIC_API_URL`
-- `NEXT_PUBLIC_ADMIN_API_KEY` (opcional, para enviar header `x-admin-api-key`).
-
-## Backend (Fase 3)
-
-Módulos:
-- `projects`
-- `wordpress-installations`
-- `content-jobs`
-- `logs`
-- `queue`
-
-Principais rotas:
-- `GET /api/v1/health`
-- `POST/GET/PATCH/DELETE /api/v1/projects`
-- `POST/GET/PATCH /api/v1/wordpress-installations`
-- `POST/GET/PATCH /api/v1/content-jobs`
-- `POST/GET /api/v1/logs`
+- `/projects/[id]` Detalhes do projeto com visão geral, instalações, jobs, logs e ações.
 
 ## Como executar (dev)
 
@@ -75,6 +123,3 @@ npm run prisma:migrate
 npm run dev:api
 npm run dev:web
 ```
-
-## Próximo passo
-- Avançar Fase 5 com camada de integração WordPress desacoplada (múltiplas estratégias de autenticação e operações de posts/pages).
