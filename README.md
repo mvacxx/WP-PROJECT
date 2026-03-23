@@ -123,3 +123,7 @@ npm run prisma:migrate
 npm run dev:api
 npm run dev:web
 ```
+
+## Produção
+
+Para instruções completas de deploy e operação em produção, consulte `README.production.md`.
