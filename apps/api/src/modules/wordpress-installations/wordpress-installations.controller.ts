@@ -1,12 +1,10 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { ProvisioningStatus, WordpressConnectionStatus } from '@prisma/client';
-import { AdminApiKeyGuard } from '../../common/guards/admin-api-key.guard';
 import { CreateWordpressInstallationDto } from './dto/create-wordpress-installation.dto';
 import { TestWordpressConnectionDto } from './dto/test-connection.dto';
 import { UpdateWordpressInstallationDto } from './dto/update-wordpress-installation.dto';
 import { WordpressInstallationsService } from './wordpress-installations.service';
 
-@UseGuards(AdminApiKeyGuard)
 @Controller('wordpress-installations')
 export class WordpressInstallationsController {
   constructor(private readonly wordpressInstallationsService: WordpressInstallationsService) {}

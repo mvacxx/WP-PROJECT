@@ -1,10 +1,8 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { AdminApiKeyGuard } from '../../common/guards/admin-api-key.guard';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { CreateSystemLogDto } from './dto/create-system-log.dto';
 import { LogsService } from './logs.service';
 
-@UseGuards(AdminApiKeyGuard)
 @Controller('logs')
 export class LogsController {
   constructor(private readonly logsService: LogsService) {}

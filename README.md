@@ -1,103 +1,48 @@
 # WP Automation SaaS (Internal)
 
-Plataforma interna para provisionar blogs WordPress e operar fluxo de conteúdo semiautomático com geração externa (ex.: SEOwriting), mantendo o WordPress como hub central.
+Plataforma interna para provisionar blogs WordPress e operar fluxo de conteúdo semiautomático com WordPress como hub central.
 
-## Status atual
-- ✅ Fase 1 concluída: arquitetura e plano.
-- ✅ Fase 2 concluída: bootstrap monorepo + infra local.
-- ✅ Fase 3 concluída: backend com CRUD, logs e filas.
-- ✅ Fase 4 iniciada: frontend admin funcional conectado à API.
-- ✅ Fase 5 iniciada: adapter WordPress desacoplado com strategies de autenticação.
+## Arquitetura revisada (simplificada)
 
-## WordPress Integration Adapter (Fase 5)
+Para reduzir complexidade no MVP, a arquitetura foi simplificada em 4 blocos:
 
-A camada foi implementada em `apps/api/src/modules/wordpress-integration` e segue padrão de portas/adapters:
+1. **Admin Web (Next.js)**
+   - telas de projetos, instalações, jobs e logs.
+2. **API (NestJS)**
+   - regras de negócio + integração WordPress.
+3. **Persistência (PostgreSQL + Prisma)**
+   - estado de projetos, instalações, jobs e logs.
+4. **Assíncrono (Redis + BullMQ)**
+   - fila para execução de jobs de conteúdo.
 
-- `WordpressHttpClient`: cliente HTTP para `/wp-json/wp/v2`.
-- `WordpressAuthFactory`: escolhe estratégia de autenticação.
-- Strategies incluídas:
-  - `application_password` (Basic Auth)
-  - `bearer_token` (Bearer token)
-- `WordpressIntegrationService`: orquestra operações e grava logs.
-- `WordpressIntegrationController`: expõe APIs da integração.
+### Decisões de simplificação aplicadas
+- Guard admin aplicado **globalmente** no `AppModule` (removido uso repetido nos controllers).
+- Módulo de WordPress Integration com DI direta e factory simplificada (sem wiring excessivo).
+- `ContentJobsModule` sem `forwardRef` desnecessário.
+- Documentação de produção separada em arquivo próprio.
 
-### Endpoints
+## Status das fases
+- ✅ Fase 1: arquitetura e plano.
+- ✅ Fase 2: bootstrap monorepo e infraestrutura local.
+- ✅ Fase 3: backend CRUD, logs e filas.
+- ✅ Fase 4: frontend admin funcional.
+- ✅ Fase 5: adapter WordPress desacoplado.
+
+## WordPress Integration Adapter
+
+Endpoints:
 - `POST /api/v1/wordpress-integration/test-connection`
 - `POST /api/v1/wordpress-integration/posts/list`
 - `PATCH /api/v1/wordpress-integration/posts/:postId`
 - `POST /api/v1/wordpress-integration/pages/upsert`
 
-### Exemplos de payload
+Auth methods suportados:
+- `application_password`
+- `bearer_token`
 
-#### Testar conexão
-```json
-{
-  "siteUrl": "https://meusite.com",
-  "auth": {
-    "method": "application_password",
-    "username": "admin",
-    "applicationPassword": "xxxx xxxx xxxx xxxx"
-  }
-}
-```
+## Execução local
 
-#### Listar posts
-```json
-{
-  "siteUrl": "https://meusite.com",
-  "auth": {
-    "method": "bearer_token",
-    "bearerToken": "jwt-ou-token"
-  },
-  "page": 1,
-  "perPage": 10,
-  "status": "draft"
-}
-```
-
-#### Atualizar post
-```json
-{
-  "siteUrl": "https://meusite.com",
-  "auth": {
-    "method": "application_password",
-    "username": "admin",
-    "applicationPassword": "xxxx xxxx xxxx xxxx"
-  },
-  "status": "publish",
-  "slug": "novo-slug",
-  "categories": [3],
-  "tags": [10, 11]
-}
-```
-
-#### Criar/atualizar página
-```json
-{
-  "siteUrl": "https://meusite.com",
-  "auth": {
-    "method": "application_password",
-    "username": "admin",
-    "applicationPassword": "xxxx xxxx xxxx xxxx"
-  },
-  "title": "Privacy Policy",
-  "slug": "privacy-policy",
-  "content": "<p>Conteúdo...</p>",
-  "status": "draft"
-}
-```
-
-## Frontend Admin (Fase 4)
-
-Rotas implementadas:
-- `/` Dashboard com resumo e projetos recentes.
-- `/projects` Lista de projetos com status.
-- `/projects/new` Formulário de cadastro de projeto.
-- `/projects/[id]` Detalhes do projeto com visão geral, instalações, jobs, logs e ações.
-
-## Como executar (dev)
-
-1. Criar env:
+1. Copiar env:
 ```bash
 cp .env.example .env
 ```
@@ -126,4 +71,4 @@ npm run dev:web
 
 ## Produção
 
-Para instruções completas de deploy e operação em produção, consulte `README.production.md`.
+Consulte `README.production.md` para deploy e operação em produção.

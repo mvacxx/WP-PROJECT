@@ -6,7 +6,6 @@ import { WordpressAuthFactory } from './wordpress-auth.factory';
 import { WordpressHttpClient } from './wordpress-http.client';
 import { WordpressIntegrationController } from './wordpress-integration.controller';
 import { WordpressIntegrationService } from './wordpress-integration.service';
-import { WordpressAuthStrategy } from './interfaces/wordpress-auth-strategy.interface';
 
 @Module({
   imports: [LogsModule],
@@ -14,14 +13,7 @@ import { WordpressAuthStrategy } from './interfaces/wordpress-auth-strategy.inte
   providers: [
     ApplicationPasswordStrategy,
     BearerTokenStrategy,
-    {
-      provide: WordpressAuthFactory,
-      useFactory: (
-        applicationPassword: ApplicationPasswordStrategy,
-        bearerToken: BearerTokenStrategy
-      ) => new WordpressAuthFactory([applicationPassword, bearerToken] as WordpressAuthStrategy[]),
-      inject: [ApplicationPasswordStrategy, BearerTokenStrategy]
-    },
+    WordpressAuthFactory,
     WordpressHttpClient,
     WordpressIntegrationService
   ],
