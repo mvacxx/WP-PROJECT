@@ -4,8 +4,6 @@ Plataforma interna para provisionar blogs WordPress e operar fluxo de conteúdo 
 
 ## Arquitetura revisada (simplificada)
 
-Para reduzir complexidade no MVP, a arquitetura foi simplificada em 4 blocos:
-
 1. **Admin Web (Next.js)**
 2. **API (NestJS)**
 3. **Persistência (PostgreSQL + Prisma)**
@@ -16,9 +14,19 @@ Para reduzir complexidade no MVP, a arquitetura foi simplificada em 4 blocos:
 - Guard global com separação de credencial por escopo:
   - `x-auth-scope: human` + `x-admin-api-key`
   - `x-auth-scope: system` + `x-system-api-key`
-  - sem escopo explícito: aceita qualquer chave válida
 - Health endpoint público (`GET /api/v1/health`)
-- Auditoria básica para mutações HTTP (POST/PATCH/PUT/DELETE) com `AuditLogInterceptor`.
+- Auditoria básica para mutações HTTP (`AuditLogInterceptor`).
+
+## SecretsService (atual)
+
+- Serviço central para criptografar/decriptar secrets sensíveis.
+- Algoritmo: `AES-256-GCM` com chave derivada de `CREDENTIALS_ENCRYPTION_KEY`.
+- Aplicado em credenciais de `WordpressInstallation`:
+  - `wpApplicationPassword`
+  - `sshPrivateKey`
+- Responses de instalação **não expõem** campos criptografados; retornam apenas:
+  - `hasWpApplicationPassword`
+  - `hasSshPrivateKey`
 
 ## WordPress Integration Adapter
 

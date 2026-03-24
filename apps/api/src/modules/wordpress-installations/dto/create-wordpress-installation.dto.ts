@@ -30,7 +30,7 @@ export class CreateWordpressInstallationDto {
 
   @IsOptional()
   @IsString()
-  wpApplicationPasswordEnc?: string;
+  wpApplicationPassword?: string;
 
   @IsOptional()
   @IsString()
@@ -47,7 +47,7 @@ export class CreateWordpressInstallationDto {
 
   @IsOptional()
   @IsString()
-  sshPrivateKeyEnc?: string;
+  sshPrivateKey?: string;
 
   @IsOptional()
   @IsString()

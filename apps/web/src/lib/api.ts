@@ -67,11 +67,11 @@ export const api = {
     wpSiteUrl?: string;
     wpAdminUrl?: string;
     wpUsername?: string;
-    wpApplicationPasswordEnc?: string;
+    wpApplicationPassword?: string;
     sshHost?: string;
     sshPort?: number;
     sshUsername?: string;
-    sshPrivateKeyEnc?: string;
+    sshPrivateKey?: string;
     timezone?: string;
     permalinkStructure?: string;
   }) {

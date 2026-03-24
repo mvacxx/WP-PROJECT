@@ -12,6 +12,7 @@ import { QueueModule } from './modules/queue/queue.module';
 import { WordpressInstallationsModule } from './modules/wordpress-installations/wordpress-installations.module';
 import { WordpressIntegrationModule } from './modules/wordpress-integration/wordpress-integration.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SecretsModule } from './common/secrets/secrets.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PrismaModule } from './prisma/prisma.module';
       validate: validateEnv
     }),
     PrismaModule,
+    SecretsModule,
     HealthModule,
     LogsModule,
     QueueModule,
