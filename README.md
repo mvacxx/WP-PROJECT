@@ -21,12 +21,19 @@ Plataforma interna para provisionar blogs WordPress e operar fluxo de conteúdo 
 
 - Serviço central para criptografar/decriptar secrets sensíveis.
 - Algoritmo: `AES-256-GCM` com chave derivada de `CREDENTIALS_ENCRYPTION_KEY`.
-- Aplicado em credenciais de `WordpressInstallation`:
-  - `wpApplicationPassword`
-  - `sshPrivateKey`
-- Responses de instalação **não expõem** campos criptografados; retornam apenas:
-  - `hasWpApplicationPassword`
-  - `hasSshPrivateKey`
+- Aplicado em credenciais de `WordpressInstallation` (`wpApplicationPassword`, `sshPrivateKey`).
+- Responses de instalação não expõem segredo (somente flags `hasWpApplicationPassword` e `hasSshPrivateKey`).
+
+## Domínio ContentJob (fase atual)
+
+- Campos adicionados:
+  - `attemptCount`
+  - `lastAttemptAt`
+  - `providerJobId`
+  - `providerStatus`
+  - `targetPublishMode`
+- `provider` passou para enum (`seowriting`, `manual`, `generic`).
+- `installationType` de projeto passou para enum (`vps`, `shared_hosting`, `cloud`, `manual`).
 
 ## WordPress Integration Adapter
 

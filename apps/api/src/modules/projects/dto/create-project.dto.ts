@@ -1,4 +1,6 @@
-import { IsArray, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsArray, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+
+const installationTypes = ['vps', 'shared_hosting', 'cloud', 'manual'] as const;
 
 export class CreateProjectDto {
   @IsString()
@@ -30,7 +32,6 @@ export class CreateProjectDto {
   @IsString({ each: true })
   defaultPlugins!: string[];
 
-  @IsString()
-  @MaxLength(80)
-  installationType!: string;
+  @IsIn(installationTypes)
+  installationType!: (typeof installationTypes)[number];
 }

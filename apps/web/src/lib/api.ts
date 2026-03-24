@@ -44,7 +44,7 @@ export const api = {
     desiredTheme?: string;
     initialPages: string[];
     defaultPlugins: string[];
-    installationType: string;
+    installationType: 'vps' | 'shared_hosting' | 'cloud' | 'manual';
   }) {
     return request<Project>('/projects', { method: 'POST', body: payload });
   },
@@ -92,7 +92,8 @@ export const api = {
     projectId: string;
     title: string;
     keyword: string;
-    provider: string;
+    provider: 'seowriting' | 'manual' | 'generic';
+    targetPublishMode?: 'manual_review' | 'auto_publish' | 'scheduled';
     scheduledAt?: string;
   }) {
     return request<ContentJob>('/content-jobs', { method: 'POST', body: payload });

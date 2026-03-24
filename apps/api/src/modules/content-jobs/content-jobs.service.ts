@@ -1,5 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ContentJobStatus, LogLevel } from '@prisma/client';
+import {
+  ContentJobStatus,
+  LogLevel,
+  ProviderJobStatus,
+  TargetPublishMode
+} from '@prisma/client';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LogsService } from '../logs/logs.service';
@@ -32,13 +37,17 @@ export class ContentJobsService {
         title: dto.title,
         keyword: dto.keyword,
         provider: dto.provider,
+        targetPublishMode: dto.targetPublishMode ?? TargetPublishMode.manual_review,
+        providerStatus: ProviderJobStatus.queued,
         scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : null,
-        status: ContentJobStatus.pending
+        status: ContentJobStatus.pending,
+        attemptCount: 0
       }
     });
 
     await this.logsService.createContentLog(job.id, LogLevel.info, 'Content job created', {
-      provider: dto.provider
+      provider: dto.provider,
+      targetPublishMode: dto.targetPublishMode ?? TargetPublishMode.manual_review
     });
 
     await this.queueService.enqueueContentGeneration(CONTENT_GENERATION_JOB, {

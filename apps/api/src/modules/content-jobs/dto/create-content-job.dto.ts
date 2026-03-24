@@ -1,4 +1,7 @@
-import { IsDateString, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsDateString, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+
+const contentProviders = ['seowriting', 'manual', 'generic'] as const;
+const publishModes = ['manual_review', 'auto_publish', 'scheduled'] as const;
 
 export class CreateContentJobDto {
   @IsString()
@@ -12,9 +15,12 @@ export class CreateContentJobDto {
   @MaxLength(160)
   keyword!: string;
 
-  @IsString()
-  @MaxLength(80)
-  provider!: string;
+  @IsIn(contentProviders)
+  provider!: (typeof contentProviders)[number];
+
+  @IsOptional()
+  @IsIn(publishModes)
+  targetPublishMode?: (typeof publishModes)[number];
 
   @IsOptional()
   @IsDateString()

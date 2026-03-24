@@ -7,7 +7,7 @@ export type Project = {
   desiredTheme?: string | null;
   initialPages: string[];
   defaultPlugins: string[];
-  installationType: string;
+  installationType: 'vps' | 'shared_hosting' | 'cloud' | 'manual';
   status: 'draft' | 'provisioning' | 'ready' | 'failed' | 'paused';
   wordpressConnection: 'unknown' | 'connected' | 'failed';
   createdAt: string;
@@ -24,7 +24,12 @@ export type ContentJob = {
   projectId: string;
   title: string;
   keyword: string;
-  provider: string;
+  provider: 'seowriting' | 'manual' | 'generic';
+  providerJobId?: string | null;
+  providerStatus: 'queued' | 'processing' | 'completed' | 'failed' | 'unknown';
+  targetPublishMode: 'manual_review' | 'auto_publish' | 'scheduled';
+  attemptCount: number;
+  lastAttemptAt?: string | null;
   status:
     | 'pending'
     | 'sending_to_generation'
@@ -45,6 +50,8 @@ export type WordpressInstallation = {
   status: 'pending' | 'running' | 'completed' | 'failed';
   wpSiteUrl?: string | null;
   wpAdminUrl?: string | null;
+  hasWpApplicationPassword: boolean;
+  hasSshPrivateKey: boolean;
   createdAt: string;
   updatedAt: string;
 };

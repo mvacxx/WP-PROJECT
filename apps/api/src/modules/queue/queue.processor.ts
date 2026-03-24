@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ContentJobStatus, LogLevel } from '@prisma/client';
+import { ContentJobStatus, LogLevel, ProviderJobStatus } from '@prisma/client';
 import { Job, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import { LogsService } from '../logs/logs.service';
@@ -37,12 +37,16 @@ export class QueueProcessor implements OnModuleInit, OnModuleDestroy {
         await this.prisma.contentJob.update({
           where: { id: contentJobId },
           data: {
-            status: ContentJobStatus.sending_to_generation
+            status: ContentJobStatus.sending_to_generation,
+            providerStatus: ProviderJobStatus.processing,
+            attemptCount: { increment: 1 },
+            lastAttemptAt: new Date()
           }
         });
 
         await this.logsService.createContentLog(contentJobId, LogLevel.info, 'Job sent to generation provider', {
-          queueJobId: job.id
+          queueJobId: job.id,
+          attempt: job.attemptsMade + 1
         });
       },
       { connection: this.connection }
@@ -55,7 +59,9 @@ export class QueueProcessor implements OnModuleInit, OnModuleDestroy {
         where: { id: job.data.contentJobId },
         data: {
           status: ContentJobStatus.failed,
-          failureReason: error.message
+          providerStatus: ProviderJobStatus.failed,
+          failureReason: error.message,
+          lastAttemptAt: new Date()
         }
       });
 
@@ -63,7 +69,7 @@ export class QueueProcessor implements OnModuleInit, OnModuleDestroy {
         job.data.contentJobId,
         LogLevel.error,
         'Queue processing failed',
-        { error: error.message }
+        { error: error.message, attempt: job.attemptsMade }
       );
     });
   }
