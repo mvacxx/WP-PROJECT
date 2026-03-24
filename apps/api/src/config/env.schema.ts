@@ -9,7 +9,8 @@ export const envSchema = z.object({
   REDIS_URL: z.string().min(1),
   JWT_SECRET: z.string().min(16),
   CREDENTIALS_ENCRYPTION_KEY: z.string().min(32),
-  ADMIN_API_KEY: z.string().min(16).optional()
+  ADMIN_API_KEY: z.string().min(16).optional(),
+  SYSTEM_API_KEY: z.string().min(16).optional()
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

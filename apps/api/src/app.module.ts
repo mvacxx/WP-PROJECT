@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.config';
 import { AdminApiKeyGuard } from './common/guards/admin-api-key.guard';
+import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
 import { HealthModule } from './health/health.module';
 import { ContentJobsModule } from './modules/content-jobs/content-jobs.module';
 import { LogsModule } from './modules/logs/logs.module';
@@ -31,6 +32,10 @@ import { PrismaModule } from './prisma/prisma.module';
     {
       provide: APP_GUARD,
       useClass: AdminApiKeyGuard
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditLogInterceptor
     }
   ]
 })

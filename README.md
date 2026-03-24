@@ -7,26 +7,18 @@ Plataforma interna para provisionar blogs WordPress e operar fluxo de conteúdo 
 Para reduzir complexidade no MVP, a arquitetura foi simplificada em 4 blocos:
 
 1. **Admin Web (Next.js)**
-   - telas de projetos, instalações, jobs e logs.
 2. **API (NestJS)**
-   - regras de negócio + integração WordPress.
 3. **Persistência (PostgreSQL + Prisma)**
-   - estado de projetos, instalações, jobs e logs.
 4. **Assíncrono (Redis + BullMQ)**
-   - fila para execução de jobs de conteúdo.
 
-### Decisões de simplificação aplicadas
-- Guard admin aplicado **globalmente** no `AppModule` (removido uso repetido nos controllers).
-- Módulo de WordPress Integration com DI direta e factory simplificada (sem wiring excessivo).
-- `ContentJobsModule` sem `forwardRef` desnecessário.
-- Documentação de produção separada em arquivo próprio.
+## Segurança MVP (atual)
 
-## Status das fases
-- ✅ Fase 1: arquitetura e plano.
-- ✅ Fase 2: bootstrap monorepo e infraestrutura local.
-- ✅ Fase 3: backend CRUD, logs e filas.
-- ✅ Fase 4: frontend admin funcional.
-- ✅ Fase 5: adapter WordPress desacoplado.
+- Guard global com separação de credencial por escopo:
+  - `x-auth-scope: human` + `x-admin-api-key`
+  - `x-auth-scope: system` + `x-system-api-key`
+  - sem escopo explícito: aceita qualquer chave válida
+- Health endpoint público (`GET /api/v1/health`)
+- Auditoria básica para mutações HTTP (POST/PATCH/PUT/DELETE) com `AuditLogInterceptor`.
 
 ## WordPress Integration Adapter
 
