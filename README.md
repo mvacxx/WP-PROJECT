@@ -33,7 +33,10 @@ Plataforma interna para provisionar blogs WordPress e operar fluxo de conteúdo 
   - `providerStatus`
   - `targetPublishMode`
 - `provider` passou para enum (`seowriting`, `manual`, `generic`).
-- `installationType` de projeto passou para enum (`vps`, `shared_hosting`, `cloud`, `manual`).
+- Fluxo endurecido com:
+  - validação de transição de status
+  - métodos centralizados no service (`markSendingToGeneration`, `markFailed`)
+  - queue processor sem lógica de status direta (delegada ao service)
 
 ## WordPress Integration Adapter
 

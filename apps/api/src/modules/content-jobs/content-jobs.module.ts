@@ -1,11 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { LogsModule } from '../logs/logs.module';
 import { QueueModule } from '../queue/queue.module';
 import { ContentJobsController } from './content-jobs.controller';
 import { ContentJobsService } from './content-jobs.service';
 
 @Module({
-  imports: [LogsModule, QueueModule],
+  imports: [LogsModule, forwardRef(() => QueueModule)],
   controllers: [ContentJobsController],
   providers: [ContentJobsService],
   exports: [ContentJobsService]

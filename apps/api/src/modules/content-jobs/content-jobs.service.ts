@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import {
   ContentJobStatus,
   LogLevel,
@@ -10,6 +10,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { LogsService } from '../logs/logs.service';
 import { CONTENT_GENERATION_JOB } from '../queue/queue.constants';
 import { QueueService } from '../queue/queue.service';
+import { assertContentJobTransition } from './content-job-status-machine';
 import { CreateContentJobDto } from './dto/create-content-job.dto';
 import { UpdateContentJobStatusDto } from './dto/update-content-job-status.dto';
 
@@ -18,6 +19,7 @@ export class ContentJobsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly logsService: LogsService,
+    @Inject(forwardRef(() => QueueService))
     private readonly queueService: QueueService
   ) {}
 
@@ -72,10 +74,12 @@ export class ContentJobsService {
   }
 
   async updateStatus(id: string, dto: UpdateContentJobStatusDto) {
-    const exists = await this.prisma.contentJob.findUnique({ where: { id }, select: { id: true } });
-    if (!exists) {
+    const existing = await this.prisma.contentJob.findUnique({ where: { id } });
+    if (!existing) {
       throw new NotFoundException('Content job not found');
     }
+
+    assertContentJobTransition(existing.status, dto.status);
 
     const updated = await this.prisma.contentJob.update({
       where: { id },
@@ -86,10 +90,62 @@ export class ContentJobsService {
     });
 
     await this.logsService.createContentLog(id, LogLevel.info, 'Content job status updated', {
-      status: dto.status,
+      from: existing.status,
+      to: dto.status,
       failureReason: dto.failureReason
     });
 
     return updated;
+  }
+
+  async markSendingToGeneration(contentJobId: string, attempt: number) {
+    const existing = await this.prisma.contentJob.findUnique({ where: { id: contentJobId } });
+    if (!existing) {
+      throw new NotFoundException('Content job not found');
+    }
+
+    assertContentJobTransition(existing.status, ContentJobStatus.sending_to_generation);
+
+    await this.prisma.contentJob.update({
+      where: { id: contentJobId },
+      data: {
+        status: ContentJobStatus.sending_to_generation,
+        providerStatus: ProviderJobStatus.processing,
+        attemptCount: { increment: 1 },
+        lastAttemptAt: new Date()
+      }
+    });
+
+    await this.logsService.createContentLog(contentJobId, LogLevel.info, 'Job sent to generation provider', {
+      from: existing.status,
+      to: ContentJobStatus.sending_to_generation,
+      attempt
+    });
+  }
+
+  async markFailed(contentJobId: string, reason: string, attempt: number) {
+    const existing = await this.prisma.contentJob.findUnique({ where: { id: contentJobId } });
+    if (!existing) {
+      throw new NotFoundException('Content job not found');
+    }
+
+    assertContentJobTransition(existing.status, ContentJobStatus.failed);
+
+    await this.prisma.contentJob.update({
+      where: { id: contentJobId },
+      data: {
+        status: ContentJobStatus.failed,
+        providerStatus: ProviderJobStatus.failed,
+        failureReason: reason,
+        lastAttemptAt: new Date()
+      }
+    });
+
+    await this.logsService.createContentLog(contentJobId, LogLevel.error, 'Queue processing failed', {
+      from: existing.status,
+      to: ContentJobStatus.failed,
+      error: reason,
+      attempt
+    });
   }
 }
