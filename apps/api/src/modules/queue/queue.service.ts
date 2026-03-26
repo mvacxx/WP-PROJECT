@@ -18,13 +18,18 @@ export class QueueService implements OnModuleDestroy {
     });
   }
 
-  async enqueueContentGeneration(name: string, payload: unknown, options?: JobsOptions): Promise<void> {
+  async enqueueContentGeneration(
+    name: string,
+    payload: { contentJobId?: string; [key: string]: unknown },
+    options?: JobsOptions
+  ): Promise<void> {
     await this.contentQueue.add(name, payload, {
       attempts: 3,
       backoff: {
         type: 'exponential',
         delay: 2000
       },
+      jobId: payload.contentJobId,
       removeOnComplete: true,
       removeOnFail: false,
       ...options

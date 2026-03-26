@@ -44,6 +44,7 @@ Endpoints:
 - `POST /api/v1/wordpress-integration/test-connection`
 - `POST /api/v1/wordpress-integration/posts/list`
 - `PATCH /api/v1/wordpress-integration/posts/:postId`
+- `POST /api/v1/wordpress-integration/posts/upsert`
 - `POST /api/v1/wordpress-integration/pages/upsert`
 
 Auth methods suportados:
@@ -82,3 +83,12 @@ npm run dev:web
 ## Produção
 
 Consulte `README.production.md` para deploy e operação em produção.
+
+
+## Idempotência e retry (fase atual)
+
+- Criação de `ContentJob` evita duplicação para combinação `projectId + title + keyword` em estados ativos.
+- Enfileiramento BullMQ usa `jobId=contentJobId` para evitar jobs duplicados.
+- `WordpressInstallation` evita criação duplicada quando já existe instalação ativa (`pending/running`) no mesmo projeto+método.
+- Adapter WordPress possui `posts/upsert` e `pages/upsert` por `slug` para operações idempotentes.
+- Adapter WordPress aplica timeout configurável (`WORDPRESS_HTTP_TIMEOUT_MS`) e retry exponencial para falhas transitórias (`429`/`5xx`) via `WORDPRESS_HTTP_MAX_RETRIES`.

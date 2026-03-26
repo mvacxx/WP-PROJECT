@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { LogLevel } from '@prisma/client';
+import { LogLevel, Prisma } from '@prisma/client';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateSystemLogDto } from './dto/create-system-log.dto';
@@ -8,11 +8,17 @@ import { CreateSystemLogDto } from './dto/create-system-log.dto';
 export class LogsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private toJsonValue(
+    metadata?: Record<string, unknown>
+  ): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
+    return metadata as Prisma.InputJsonValue | undefined;
+  }
+
   createSystemLog(dto: CreateSystemLogDto) {
     return this.prisma.systemLog.create({
       data: {
         ...dto,
-        metadata: dto.metadata
+        metadata: this.toJsonValue(dto.metadata)
       }
     });
   }
@@ -23,7 +29,7 @@ export class LogsService {
         jobId,
         level,
         message,
-        metadata
+        metadata: this.toJsonValue(metadata)
       }
     });
   }

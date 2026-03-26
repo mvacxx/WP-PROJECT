@@ -34,6 +34,21 @@ export class WordpressInstallationsService {
   ) {}
 
   async create(dto: CreateWordpressInstallationDto): Promise<SafeWordpressInstallation> {
+    const existing = await this.prisma.wordpressInstallation.findFirst({
+      where: {
+        projectId: dto.projectId,
+        method: dto.method,
+        status: {
+          in: [ProvisioningStatus.pending, ProvisioningStatus.running]
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (existing) {
+      return this.toSafeInstallation(existing);
+    }
+
     const installation = await this.prisma.wordpressInstallation.create({
       data: {
         projectId: dto.projectId,

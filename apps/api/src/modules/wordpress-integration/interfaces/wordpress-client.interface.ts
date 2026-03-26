@@ -22,6 +22,15 @@ export type WordpressPostUpdatePayload = {
   excerpt?: string;
 };
 
+export type WordpressPostUpsertPayload = {
+  title: string;
+  slug: string;
+  content: string;
+  status?: 'draft' | 'publish' | 'future' | 'pending' | 'private';
+  categories?: number[];
+  tags?: number[];
+};
+
 export type WordpressPageUpsertPayload = {
   title: string;
   slug: string;
@@ -33,5 +42,6 @@ export interface WordpressClient {
   testConnection(context: WordpressRequestContext): Promise<{ connected: boolean; statusCode: number }>;
   listPosts(context: WordpressRequestContext, query: WordpressPostQuery): Promise<unknown>;
   updatePost(context: WordpressRequestContext, postId: number, payload: WordpressPostUpdatePayload): Promise<unknown>;
+  upsertPost(context: WordpressRequestContext, payload: WordpressPostUpsertPayload): Promise<unknown>;
   upsertPage(context: WordpressRequestContext, payload: WordpressPageUpsertPayload): Promise<unknown>;
 }

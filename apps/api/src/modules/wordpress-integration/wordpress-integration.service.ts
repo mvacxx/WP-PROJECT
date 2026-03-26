@@ -5,6 +5,7 @@ import { BaseWordpressRequestDto } from './dto/base-wordpress-request.dto';
 import { ListWordpressPostsDto } from './dto/list-wordpress-posts.dto';
 import { UpdateWordpressPostDto } from './dto/update-wordpress-post.dto';
 import { UpsertWordpressPageDto } from './dto/upsert-wordpress-page.dto';
+import { UpsertWordpressPostDto } from './dto/upsert-wordpress-post.dto';
 import { WordpressHttpClient } from './wordpress-http.client';
 
 @Injectable()
@@ -63,6 +64,24 @@ export class WordpressIntegrationService {
         title: dto.title,
         content: dto.content,
         excerpt: dto.excerpt
+      }
+    );
+  }
+
+
+  upsertPost(dto: UpsertWordpressPostDto) {
+    return this.wordpressClient.upsertPost(
+      {
+        siteUrl: dto.siteUrl,
+        auth: dto.auth
+      },
+      {
+        title: dto.title,
+        slug: dto.slug,
+        content: dto.content,
+        status: dto.status,
+        categories: dto.categories,
+        tags: dto.tags
       }
     );
   }

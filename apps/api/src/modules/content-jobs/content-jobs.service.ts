@@ -33,6 +33,35 @@ export class ContentJobsService {
       throw new NotFoundException('Project not found');
     }
 
+
+    const existingJob = await this.prisma.contentJob.findFirst({
+      where: {
+        projectId: dto.projectId,
+        title: dto.title,
+        keyword: dto.keyword,
+        status: {
+          in: [
+            ContentJobStatus.pending,
+            ContentJobStatus.sending_to_generation,
+            ContentJobStatus.generated,
+            ContentJobStatus.posted_to_wordpress,
+            ContentJobStatus.review_pending
+          ]
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (existingJob) {
+      await this.logsService.createContentLog(existingJob.id, LogLevel.warn, 'Duplicate content job prevented', {
+        projectId: dto.projectId,
+        title: dto.title,
+        keyword: dto.keyword
+      });
+
+      return existingJob;
+    }
+
     const job = await this.prisma.contentJob.create({
       data: {
         projectId: dto.projectId,
