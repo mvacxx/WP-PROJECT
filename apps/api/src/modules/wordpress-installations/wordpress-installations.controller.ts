@@ -29,6 +29,11 @@ export class WordpressInstallationsController {
     return this.wordpressInstallationsService.updateStatus(id, status);
   }
 
+  @Post(':id/provision')
+  provision(@Param('id') id: string) {
+    return this.wordpressInstallationsService.provision(id);
+  }
+
   @Post('test-connection')
   async testConnection(@Body() dto: TestWordpressConnectionDto) {
     const result = await this.wordpressInstallationsService.testConnection(dto);

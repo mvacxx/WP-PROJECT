@@ -1,10 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, ProvisioningStatus, WordpressConnectionStatus } from '@prisma/client';
+import {
+  LogLevel,
+  Prisma,
+  ProvisioningMethod,
+  ProvisioningStatus,
+  WordpressConnectionStatus
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SecretsService } from '../../common/secrets/secrets.service';
+import { LogsService } from '../logs/logs.service';
 import { CreateWordpressInstallationDto } from './dto/create-wordpress-installation.dto';
 import { UpdateWordpressInstallationDto } from './dto/update-wordpress-installation.dto';
 import { TestWordpressConnectionDto } from './dto/test-connection.dto';
+import { ProvisioningStrategyFactory } from './provisioning-strategy.factory';
+import { assertProvisioningTransition } from './provisioning-status-machine';
 
 type SafeWordpressInstallation = {
   id: string;
@@ -30,7 +39,9 @@ type SafeWordpressInstallation = {
 export class WordpressInstallationsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly secretsService: SecretsService
+    private readonly secretsService: SecretsService,
+    private readonly logsService: LogsService,
+    private readonly provisioningStrategyFactory: ProvisioningStrategyFactory
   ) {}
 
   async create(dto: CreateWordpressInstallationDto): Promise<SafeWordpressInstallation> {
@@ -107,7 +118,12 @@ export class WordpressInstallationsService {
   }
 
   async updateStatus(id: string, status: ProvisioningStatus): Promise<SafeWordpressInstallation> {
-    await this.ensureExists(id);
+    const existing = await this.prisma.wordpressInstallation.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('WordPress installation not found');
+    }
+
+    assertProvisioningTransition(existing.status, status);
 
     const installation = await this.prisma.wordpressInstallation.update({
       where: { id },
@@ -143,11 +159,114 @@ export class WordpressInstallationsService {
     });
   }
 
+  async provision(id: string): Promise<SafeWordpressInstallation> {
+    const installation = await this.prisma.wordpressInstallation.findUnique({ where: { id } });
+    if (!installation) {
+      throw new NotFoundException('WordPress installation not found');
+    }
+
+    assertProvisioningTransition(installation.status, ProvisioningStatus.running);
+
+    await this.prisma.wordpressInstallation.update({
+      where: { id },
+      data: { status: ProvisioningStatus.running }
+    });
+
+    try {
+      const strategy = this.provisioningStrategyFactory.resolve(installation.method);
+      const result = await strategy.execute(this.toProvisioningContext(installation));
+
+      const updated = await this.prisma.wordpressInstallation.update({
+        where: { id },
+        data: {
+          status: ProvisioningStatus.completed,
+          lastSyncAt: new Date()
+        }
+      });
+
+      await this.logsService.createSystemLog({
+        projectId: installation.projectId,
+        level: LogLevel.info,
+        source: 'wordpress-provisioning',
+        message: result.message,
+        metadata: {
+          installationId: installation.id,
+          method: installation.method,
+          ...result.metadata
+        }
+      });
+
+      return this.toSafeInstallation(updated);
+    } catch (error) {
+      await this.prisma.wordpressInstallation.update({
+        where: { id },
+        data: { status: ProvisioningStatus.failed }
+      });
+
+      await this.logsService.createSystemLog({
+        projectId: installation.projectId,
+        level: LogLevel.error,
+        source: 'wordpress-provisioning',
+        message: error instanceof Error ? error.message : 'Provisioning failed',
+        metadata: {
+          installationId: installation.id,
+          method: installation.method
+        }
+      });
+
+      throw error;
+    }
+  }
+
   private async ensureExists(id: string): Promise<void> {
     const exists = await this.prisma.wordpressInstallation.findUnique({ where: { id }, select: { id: true } });
     if (!exists) {
       throw new NotFoundException('WordPress installation not found');
     }
+  }
+
+  private toProvisioningContext(installation: {
+    id: string;
+    projectId: string;
+    method: ProvisioningMethod;
+    status: ProvisioningStatus;
+    wpSiteUrl: string | null;
+    wpAdminUrl: string | null;
+    wpUsername: string | null;
+    wpApplicationPasswordEnc: string | null;
+    sshHost: string | null;
+    sshPort: number | null;
+    sshUsername: string | null;
+    sshPrivateKeyEnc: string | null;
+    timezone: string | null;
+    permalinkStructure: string | null;
+    lastSyncAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    return {
+      id: installation.id,
+      projectId: installation.projectId,
+      method: installation.method,
+      status: installation.status,
+      wpSiteUrl: installation.wpSiteUrl,
+      wpAdminUrl: installation.wpAdminUrl,
+      wpUsername: installation.wpUsername,
+      wpApplicationPassword: installation.wpApplicationPasswordEnc
+        ? this.secretsService.decrypt(installation.wpApplicationPasswordEnc)
+        : null,
+      sshHost: installation.sshHost,
+      sshPort: installation.sshPort,
+      sshUsername: installation.sshUsername,
+      sshPrivateKey: installation.sshPrivateKeyEnc
+        ? this.secretsService.decrypt(installation.sshPrivateKeyEnc)
+        : null,
+      timezone: installation.timezone,
+      permalinkStructure: installation.permalinkStructure,
+      lastSyncAt: installation.lastSyncAt,
+      createdAt: installation.createdAt,
+      updatedAt: installation.updatedAt
+    };
   }
 
   private toSafeInstallation(installation: {

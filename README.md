@@ -47,6 +47,10 @@ Endpoints:
 - `POST /api/v1/wordpress-integration/posts/upsert`
 - `POST /api/v1/wordpress-integration/pages/upsert`
 
+Provisionamento de instalação:
+- `POST /api/v1/wordpress-installations/:id/provision` (resolve strategy por `method`: `manual`, `ssh_wp_cli`, `softaculous_api`)
+- Transições de status de provisionamento validadas (`pending/failed -> running -> completed|failed`) para evitar fluxos inválidos.
+
 Auth methods suportados:
 - `application_password`
 - `bearer_token`
