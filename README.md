@@ -88,6 +88,12 @@ npm run dev:web
 
 Consulte `README.production.md` para deploy e operação em produção.
 
+## Testes automatizados (API)
+
+- `apps/api` possui testes unitários iniciais para o fluxo de provisionamento:
+  - `provisioning-status-machine.spec.ts`
+  - `provisioning-strategy.factory.spec.ts`
+
 
 ## Idempotência e retry (fase atual)
 
