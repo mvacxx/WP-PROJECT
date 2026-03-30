@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "lint": "echo 'lint placeholder'",
-    "test": "vitest run"
+    "test": "ts-node src/tests/run-tests.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -30,7 +30,6 @@
     "@types/node": "^22.13.10",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.8.2",
-    "vitest": "^3.2.4"
+    "typescript": "^5.8.2"
   }
 }

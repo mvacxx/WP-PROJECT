@@ -35,7 +35,7 @@ Plataforma interna para provisionar blogs WordPress e operar fluxo de conteúdo 
 - `provider` passou para enum (`seowriting`, `manual`, `generic`).
 - Fluxo endurecido com:
   - validação de transição de status
-  - métodos centralizados no service (`markSendingToGeneration`, `markFailed`)
+  - métodos centralizados no service (`markSendingToGeneration`, `markGenerated`, `markFailed`)
   - queue processor sem lógica de status direta (delegada ao service)
 
 ## WordPress Integration Adapter
@@ -90,9 +90,10 @@ Consulte `README.production.md` para deploy e operação em produção.
 
 ## Testes automatizados (API)
 
-- `apps/api` possui testes unitários iniciais para o fluxo de provisionamento:
-  - `provisioning-status-machine.spec.ts`
-  - `provisioning-strategy.factory.spec.ts`
+- `apps/api` possui uma suíte inicial executável com `npm run test -w apps/api`:
+  - valida transições permitidas/bloqueadas de `provisioning-status-machine`
+  - valida resolução de estratégias no `ProvisioningStrategyFactory`
+  - implementação em `src/tests/run-tests.ts`
 
 
 ## Idempotência e retry (fase atual)

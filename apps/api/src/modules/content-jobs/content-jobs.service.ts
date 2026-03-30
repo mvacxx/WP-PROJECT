@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/commo
 import {
   ContentJobStatus,
   LogLevel,
+  Prisma,
   ProviderJobStatus,
   TargetPublishMode
 } from '@prisma/client';
@@ -22,6 +23,12 @@ export class ContentJobsService {
     @Inject(forwardRef(() => QueueService))
     private readonly queueService: QueueService
   ) {}
+
+  private toJsonValue(
+    value?: Record<string, unknown>
+  ): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
+    return value as Prisma.InputJsonValue | undefined;
+  }
 
   async create(dto: CreateContentJobDto) {
     const projectExists = await this.prisma.project.findUnique({
@@ -149,6 +156,39 @@ export class ContentJobsService {
       from: existing.status,
       to: ContentJobStatus.sending_to_generation,
       attempt
+    });
+  }
+
+  async markGenerated(
+    contentJobId: string,
+    payload: {
+      providerJobId?: string;
+      normalizedContent?: Record<string, unknown>;
+      providerPayload?: Record<string, unknown>;
+    }
+  ) {
+    const existing = await this.prisma.contentJob.findUnique({ where: { id: contentJobId } });
+    if (!existing) {
+      throw new NotFoundException('Content job not found');
+    }
+
+    assertContentJobTransition(existing.status, ContentJobStatus.generated);
+
+    await this.prisma.contentJob.update({
+      where: { id: contentJobId },
+      data: {
+        status: ContentJobStatus.generated,
+        providerStatus: ProviderJobStatus.completed,
+        providerJobId: payload.providerJobId,
+        providerPayload: this.toJsonValue(payload.providerPayload),
+        normalizedContent: this.toJsonValue(payload.normalizedContent)
+      }
+    });
+
+    await this.logsService.createContentLog(contentJobId, LogLevel.info, 'Content generation completed', {
+      from: existing.status,
+      to: ContentJobStatus.generated,
+      providerJobId: payload.providerJobId
     });
   }
 

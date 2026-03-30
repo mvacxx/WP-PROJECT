@@ -33,6 +33,17 @@ export class QueueProcessor implements OnModuleInit, OnModuleDestroy {
         this.logger.log(`Processing content job ${contentJobId}`);
 
         await this.contentJobsService.markSendingToGeneration(contentJobId, job.attemptsMade + 1);
+        await this.contentJobsService.markGenerated(contentJobId, {
+          providerJobId: `stub-${job.id}`,
+          providerPayload: {
+            provider: 'stub',
+            completedAt: new Date().toISOString()
+          },
+          normalizedContent: {
+            title: 'Generated title placeholder',
+            body: 'Generated content placeholder'
+          }
+        });
       },
       { connection: this.connection }
     );
@@ -40,7 +51,15 @@ export class QueueProcessor implements OnModuleInit, OnModuleDestroy {
     this.worker.on('failed', async (job, error) => {
       if (!job?.data?.contentJobId) return;
 
-      await this.contentJobsService.markFailed(job.data.contentJobId, error.message, job.attemptsMade);
+      try {
+        await this.contentJobsService.markFailed(job.data.contentJobId, error.message, job.attemptsMade);
+      } catch (handlerError) {
+        this.logger.error(
+          `Failed to mark job ${job.data.contentJobId} as failed: ${
+            handlerError instanceof Error ? handlerError.message : String(handlerError)
+          }`
+        );
+      }
     });
   }
 
