@@ -5,6 +5,10 @@ import { ProvisioningStrategyFactory } from '../modules/wordpress-installations/
 import { ManualProvisioningStrategy } from '../modules/wordpress-installations/strategies/manual-provisioning.strategy';
 import { SoftaculousProvisioningStrategy } from '../modules/wordpress-installations/strategies/softaculous-provisioning.strategy';
 import { SshWpCliProvisioningStrategy } from '../modules/wordpress-installations/strategies/ssh-wp-cli-provisioning.strategy';
+import { ContentGenerationProviderFactory } from '../modules/content-jobs/content-generation-provider.factory';
+import { GenericContentGenerationProvider } from '../modules/content-jobs/providers/generic-content-generation.provider';
+import { ManualContentGenerationProvider } from '../modules/content-jobs/providers/manual-content-generation.provider';
+import { SeowritingContentGenerationProvider } from '../modules/content-jobs/providers/seowriting-content-generation.provider';
 
 function runProvisioningStatusTests(): void {
   assert.doesNotThrow(() =>
@@ -37,6 +41,20 @@ function runStrategyFactoryTests(): void {
   assert.throws(() => factory.resolve('unsupported' as ProvisioningMethod));
 }
 
+function runContentProviderFactoryTests(): void {
+  const factory = new ContentGenerationProviderFactory(
+    new ManualContentGenerationProvider(),
+    new GenericContentGenerationProvider(),
+    new SeowritingContentGenerationProvider()
+  );
+
+  assert.equal(factory.resolve('manual').provider, 'manual');
+  assert.equal(factory.resolve('generic').provider, 'generic');
+  assert.equal(factory.resolve('seowriting').provider, 'seowriting');
+  assert.throws(() => factory.resolve('unsupported' as never));
+}
+
 runProvisioningStatusTests();
 runStrategyFactoryTests();
+runContentProviderFactoryTests();
 console.log('All API unit checks passed.');

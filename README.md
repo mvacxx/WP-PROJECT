@@ -93,6 +93,7 @@ Consulte `README.production.md` para deploy e operação em produção.
 - `apps/api` possui uma suíte inicial executável com `npm run test -w apps/api`:
   - valida transições permitidas/bloqueadas de `provisioning-status-machine`
   - valida resolução de estratégias no `ProvisioningStrategyFactory`
+  - valida resolução de providers no `ContentGenerationProviderFactory`
   - implementação em `src/tests/run-tests.ts`
 
 

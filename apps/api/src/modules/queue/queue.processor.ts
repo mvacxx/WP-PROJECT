@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit, forwardRef }
 import { ConfigService } from '@nestjs/config';
 import { Job, Worker } from 'bullmq';
 import IORedis from 'ioredis';
+import { ContentGenerationProviderFactory } from '../content-jobs/content-generation-provider.factory';
 import { ContentJobsService } from '../content-jobs/content-jobs.service';
 import { CONTENT_GENERATION_JOB, CONTENT_GENERATION_QUEUE } from './queue.constants';
 
@@ -14,7 +15,9 @@ export class QueueProcessor implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => ContentJobsService))
-    private readonly contentJobsService: ContentJobsService
+    private readonly contentJobsService: ContentJobsService,
+    @Inject(forwardRef(() => ContentGenerationProviderFactory))
+    private readonly contentGenerationProviderFactory: ContentGenerationProviderFactory
   ) {
     this.connection = new IORedis(this.configService.getOrThrow<string>('REDIS_URL'), {
       maxRetriesPerRequest: null
@@ -33,17 +36,15 @@ export class QueueProcessor implements OnModuleInit, OnModuleDestroy {
         this.logger.log(`Processing content job ${contentJobId}`);
 
         await this.contentJobsService.markSendingToGeneration(contentJobId, job.attemptsMade + 1);
-        await this.contentJobsService.markGenerated(contentJobId, {
-          providerJobId: `stub-${job.id}`,
-          providerPayload: {
-            provider: 'stub',
-            completedAt: new Date().toISOString()
-          },
-          normalizedContent: {
-            title: 'Generated title placeholder',
-            body: 'Generated content placeholder'
-          }
+        const contentJob = await this.contentJobsService.findByIdOrThrow(contentJobId);
+        const provider = this.contentGenerationProviderFactory.resolve(contentJob.provider);
+        const result = await provider.generate({
+          contentJobId,
+          title: contentJob.title,
+          keyword: contentJob.keyword
         });
+
+        await this.contentJobsService.markGenerated(contentJobId, result);
       },
       { connection: this.connection }
     );

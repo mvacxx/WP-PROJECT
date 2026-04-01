@@ -109,6 +109,15 @@ export class ContentJobsService {
     });
   }
 
+  async findByIdOrThrow(id: string) {
+    const job = await this.prisma.contentJob.findUnique({ where: { id } });
+    if (!job) {
+      throw new NotFoundException('Content job not found');
+    }
+
+    return job;
+  }
+
   async updateStatus(id: string, dto: UpdateContentJobStatusDto) {
     const existing = await this.prisma.contentJob.findUnique({ where: { id } });
     if (!existing) {
